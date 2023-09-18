@@ -1,9 +1,9 @@
 use ggez::{Context, GameResult};
 use ggez::event::{self, KeyCode, KeyMods};
 use ggez::graphics::{self, Color, DrawMode, Mesh, DrawParam};
+use rand::Rng; // Importe a biblioteca rand
 
 const LAUNCH_X: f32 = 100.0; // Coordenada x da área de lançamento
-const LANDING_X: f32 = 500.0; // Coordenada x da área de pouso (aumentada para 500.0)
 const Y_LEVEL: f32 = 500.0; // Mesma coordenada y para área de lançamento e área de pouso
 const GROUND_HEIGHT: f32 = 20.0; // Altura do chão
 const SCREEN_HEIGHT: f32 = 600.0; // Altura da tela
@@ -17,6 +17,7 @@ struct MainState {
     circle: Mesh,
     in_launch_area: bool,
     game_over: bool,
+    landing_x: f32, // Nova variável para a posição de pouso
 }
 
 impl MainState {
@@ -31,17 +32,28 @@ impl MainState {
         // Ajuste a coordenada Y inicial da nave para que ela comece acima da área de lançamento
         let pos_y = Y_LEVEL - 30.0;
 
+        // Chame a função para gerar a posição de pouso aleatória
+        let landing_x = gerar_posicao_de_pouso_aleatoria();
+
         Ok(MainState {
             pos_x: LAUNCH_X,
             pos_y,
             velocity_y: 0.0,
-            fuel: 100.0,
-            gravity: 0.2,
+            fuel: 200.0,
+            gravity: 0.1,
             circle,
             in_launch_area: true,
+            landing_x,
             game_over: false,
         })
     }
+}
+
+fn gerar_posicao_de_pouso_aleatoria() -> f32 {
+    let mut rng = rand::thread_rng();
+    let min_x = LAUNCH_X + 100.0; // Ajuste a margem mínima desejada
+    let max_x = 700.0; // Ajuste a largura máxima permitida
+    rng.gen_range(min_x..=max_x) // Use o operador ..= para incluir o valor máximo no intervalo
 }
 
 impl event::EventHandler<ggez::GameError> for MainState {
@@ -56,7 +68,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 self.pos_y = Y_LEVEL;
                 self.velocity_y = 0.0;
     
-                if self.pos_x >= LANDING_X - 20.0 && self.pos_x <= LANDING_X + 20.0 {
+                if self.pos_x >= self.landing_x - 20.0 && self.pos_x <= self.landing_x + 20.0 && self.velocity_y < 5.0{
                     println!("Pousou com segurança!");
                     self.game_over = true;
                 } else {
@@ -103,7 +115,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let landing_area = graphics::Mesh::new_rectangle(
             ctx,
             DrawMode::fill(),
-            graphics::Rect::new(LANDING_X - 20.0, Y_LEVEL - 5.0, 40.0, 10.0),
+            graphics::Rect::new(self.landing_x - 20.0, Y_LEVEL - 5.0, 40.0, 10.0),
             Color::from_rgb(0, 0, 255), // Azul
         )?;
         graphics::draw(ctx, &landing_area, DrawParam::default())?;
@@ -115,12 +127,12 @@ impl event::EventHandler<ggez::GameError> for MainState {
             DrawParam::new()
                 .dest([self.pos_x, self.pos_y])
         )?;
-
+        
         // Desenhe a informação de combustível na tela
-        let text = graphics::Text::new(format!("Fuel: {:.2}", self.fuel));
+        let text = graphics::Text::new(format!("Fuel: {:.2}\nVelocity: {:.2}", self.fuel, self.velocity_y));
         let text_dest = graphics::mint::Point2 { x: 10.0, y: 10.0 }; // Coordenadas para a posição do texto
         graphics::draw(ctx, &text, (text_dest, Color::WHITE))?;
-
+        
         graphics::present(ctx)?;
         Ok(())
     }
@@ -136,7 +148,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
             KeyCode::D => {
                 if self.pos_x < 800.0 {
                     self.pos_x += 15.0;
-                    self.fuel -= 1.0; // Gaste 5 de combustível ao mover para a direita
+                    self.fuel -= 1.0; // Gaste 1 de combustível ao mover para a direita
                 }
             }
             KeyCode::W => {
@@ -145,7 +157,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     self.in_launch_area = false;
                 } else if self.fuel >= 10.0 { // Gaste 10 de combustível apenas se houver pelo menos 10
                     self.velocity_y -= 5.0;
-                    self.fuel -= 5.0; // Gaste 10 de combustível ao pressionar 'W'
+                    self.fuel -= 10.0; // Gaste 10 de combustível ao pressionar 'W'
                 }
             }
             _ => (),
