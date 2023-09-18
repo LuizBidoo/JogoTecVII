@@ -1,0 +1,13 @@
+[package]
+name = "JogoTecVII"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ggez = "0.6"
+cgmath = "0.17"
+euclid = "0.21"
+nalgebra = "0.29"
+rand = "0.8"
